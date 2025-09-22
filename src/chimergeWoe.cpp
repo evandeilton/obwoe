@@ -8203,3 +8203,4 @@ DataFrame woe_gains_compare(List gains_results,
    Rcpp::stop(std::string("Error in woe_gains_compare: ") + e.what());
  }
 }
+
