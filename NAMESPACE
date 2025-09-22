@@ -2,6 +2,7 @@
 
 export("%>%")
 export(cart_woe)
+export(chimerge_woe)
 export(dmiv_woe)
 export(woe_gains)
 export(woe_gains_compare)
