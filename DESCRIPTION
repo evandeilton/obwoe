@@ -1,0 +1,16 @@
+Title: Comprehensive Optimal Binning and WoE Analysis Toolkit
+Authors@R: person("Lopes", "J.E", role = c("aut", "cre"), email = "evandeilton@gmail.com")
+Description: Implements advanced optimal binning algorithms for binary classification problems with comprehensive Weight of Evidence (WoE) and Information Value (IV) analysis. Features multiple ChiMerge algorithm variations, automatic variable type detection, sophisticated missing value and special code handling, categorical variable grouping, and detailed gains table analysis with over 20 statistical metrics. Provides high-performance C++ implementation with R integration for credit scoring, risk modeling, and feature engineering applications.
+Package: obwoe
+Type: Package
+Version: 0.2.1
+Date: 2025-09-19
+License: MIT + file LICENSE
+Imports: 
+    magrittr,
+    Rcpp (>= 1.1.0)
+LinkingTo: Rcpp
+RoxygenNote: 7.3.2
+SystemRequirements: C++17
+Encoding: UTF-8
+LazyData: true
