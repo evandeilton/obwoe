@@ -192,10 +192,6 @@ Feature ranking and comparison:
 3. **Healthcare**: Process medical data for predictive models
 4. **General Feature Engineering**: Preprocessing for machine learning models
 
-## Contributing
-
-We welcome contributions to the obwoe package. Please feel free to submit issues, feature requests, or pull requests on our GitHub repository.
-
 ## License
 
 This package is released under the MIT License. See the [LICENSE](LICENSE) file for details.
