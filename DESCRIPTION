@@ -8,7 +8,7 @@ Date: 2025-09-19
 License: MIT + file LICENSE
 Imports: 
     magrittr,
-    Rcpp (>= 1.1.0)
+    Rcpp
 LinkingTo: Rcpp
 RoxygenNote: 7.3.2
 SystemRequirements: C++17
