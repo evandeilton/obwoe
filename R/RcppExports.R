@@ -287,6 +287,98 @@ woe_gains_compare <- function(gains_results, metric = "max_ks", descending = TRU
     .Call(`_obwoe_woe_gains_compare`, gains_results, metric, descending)
 }
 
+#' High-Performance Correlation Analysis (SAS PROC CORR equivalent)
+#'
+#' This function provides comprehensive correlation analysis with multiple association 
+#' measures, hypothesis testing, and flexible missing data handling. It replicates
+#' and extends the functionality of SAS PROC CORR using optimized C++ algorithms.
+#'
+#' @param x A numeric matrix or data frame containing the variables for correlation analysis
+#' @param method Character string specifying the correlation method:
+#'   \itemize{
+#'     \item "pearson" - Pearson product-moment correlation (default)
+#'     \item "spearman" - Spearman rank correlation (non-parametric)
+#'     \item "kendall" - Kendall's tau-b (robust to outliers)
+#'     \item "alpha" - Cronbach's alpha for reliability analysis
+#'   }
+#' @param use Character string specifying missing data handling:
+#'   \itemize{
+#'     \item "pairwise" - Pairwise deletion (default, matches SAS PROC CORR default)
+#'     \item "listwise" - Listwise deletion (complete cases only, matches SAS NOMISS option)
+#'   }
+#' @param min_periods Integer minimum number of valid observations required for a correlation
+#'   (default: 2). Correlations with fewer observations return NA.
+#'
+#' @return A list with three named components (following Hmisc::rcorr structure):
+#'   \itemize{
+#'     \item r - Matrix of correlation coefficients
+#'     \item n - Matrix of sample sizes used for each pairwise correlation
+#'     \item p - Matrix of p-values for significance tests
+#'   }
+#'
+#' @details
+#' The function implements numerically stable algorithms optimized for performance:
+#' 
+#' \strong{Pearson Correlation:} Uses BLAS-optimized routines via RcppArmadillo for
+#' numerical stability. Significance testing via t-distribution with (n-2) degrees of freedom.
+#' 
+#' \strong{Spearman Correlation:} Implements midrank averaging for tied values, then
+#' applies Pearson correlation to ranks. For large samples (n >= 30), uses normal
+#' approximation for p-values.
+#' 
+#' \strong{Kendall's tau-b:} Counts concordant/discordant pairs with tie corrections.
+#' Uses normal approximation for significance testing in large samples.
+#' 
+#' \strong{Cronbach's Alpha:} Measures internal consistency reliability using the
+#' variance-based formula. Returns single value in 1×1 matrix format.
+#' 
+#' \strong{Missing Data Handling:}
+#' \itemize{
+#'   \item Pairwise: Maximizes available data but may produce non-positive-semidefinite matrices
+#'   \item Listwise: Ensures mathematical validity for downstream multivariate procedures
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Basic Pearson correlation
+#' result <- corrCpp(mtcars[, c("mpg", "hp", "wt")])
+#' print(result$r)
+#' print(result$p)
+#' 
+#' # Spearman correlation with listwise deletion
+#' result <- corrCpp(mtcars, method = "spearman", use = "listwise")
+#' 
+#' # Kendall's tau for robust correlation
+#' result <- corrCpp(mtcars, method = "kendall")
+#' 
+#' # Cronbach's alpha for reliability
+#' # (typically used with survey/scale items)
+#' alpha_result <- corrCpp(scale_items, method = "alpha")
+#' cat("Cronbach's Alpha:", alpha_result$r[1,1], "\n")
+#' }
+#'
+#' @references
+#' Pearson, K. (1895). Mathematical contributions to the theory of evolution.
+#' Philosophical Transactions of the Royal Society A, 186, 343-414.
+#' 
+#' Spearman, C. (1904). The proof and measurement of association between two things.
+#' American Journal of Psychology, 15(1), 72-101.
+#' 
+#' Kendall, M.G. (1938). A new measure of rank correlation. Biometrika, 30(1-2), 81-93.
+#' 
+#' Cronbach, L.J. (1951). Coefficient alpha and the internal structure of tests.
+#' Psychometrika, 16(3), 297-334.
+#'
+#' @note This implementation prioritizes computational efficiency while maintaining
+#' statistical accuracy. For very large matrices, consider using specialized
+#' big data correlation libraries.
+#' 
+#' @author Statistical Computing Implementation
+#' @export
+corrCpp <- function(x, method = "pearson", use = "pairwise", min_periods = 2L) {
+    .Call(`_obwoe_corrCpp`, x, method, use, min_periods)
+}
+
 #' Divergence Measures and Information Value (DMIV) Optimal Binning with WoE
 #'
 #' @description
@@ -740,6 +832,74 @@ dmiv_woe <- function(data, target_col, feature_cols, min_bins = 3L, max_bins = 1
     .Call(`_obwoe_dmiv_woe`, data, target_col, feature_cols, min_bins, max_bins, divergence_method, woe_method, smooth, min_bin_size, optimization_method, enforce_monotonicity, monotonicity_type, max_iterations, convergence_threshold, use_cross_validation, cv_folds, l1_regularization, l2_regularization, compute_confidence_intervals, confidence_level, parallel, n_threads, weights, special_values, missing_policy, cat_sep, digits, rare_category_threshold, random_seed, verbose)
 }
 
+#' Advanced Statistical Summary Processor (SAS PROC MEANS equivalent)
+#'
+#' This function computes comprehensive descriptive statistics with flexible grouping 
+#' capabilities, replicating the core functionality of SAS PROC MEANS. It uses 
+#' numerically stable algorithms and supports weighted/frequency analysis.
+#'
+#' @param data A data.frame containing the variables to analyze
+#' @param var_vars Character vector of numeric variable names for analysis. If NULL, 
+#'   all numeric variables will be analyzed
+#' @param class_vars Character vector of grouping variable names. Creates hierarchical 
+#'   summaries using SAS _TYPE_ system
+#' @param statistics Character vector of requested statistics. Available options:
+#'   "N", "NMISS", "MEAN", "SUM", "MIN", "MAX", "RANGE", "USS", "CSS", "VAR", "STD", "STDERR", "SUMWGT"
+#' @param vardef Variance divisor definition. Options:
+#'   \itemize{
+#'     \item "DF" - Degrees of freedom (n-1), produces unbiased estimator
+#'     \item "N" - Population divisor (n), maximum likelihood estimator
+#'     \item "WEIGHT" - Sum of weights
+#'     \item "WDF" - Weighted degrees of freedom (sum of weights - 1)
+#'   }
+#' @param weight_var Optional character string naming the weight variable for weighted analysis
+#' @param freq_var Optional character string naming the frequency variable (treats each 
+#'   observation as representing multiple identical observations)
+#' @param alpha Significance level for confidence intervals (currently not implemented)
+#'
+#' @return A data.frame with computed statistics including:
+#'   \itemize{
+#'     \item _TYPE_ - Hierarchical grouping level (SAS _TYPE_ system)
+#'     \item Class variables - Values of grouping variables
+#'     \item _VAR_ - Analysis variable name
+#'     \item _STAT_ - Statistic name
+#'     \item _VALUE_ - Computed statistic value
+#'   }
+#'
+#' @details
+#' The function implements Welford's algorithm for numerically stable variance computation
+#' and supports the complete SAS _TYPE_ hierarchical grouping system. When multiple class
+#' variables are specified, it generates all possible combinations of grouping levels.
+#'
+#' @examples
+#' \dontrun{
+#' # Basic usage - analyze all numeric variables
+#' result <- meansCpp(mtcars)
+#' 
+#' # Analyze specific variables with grouping
+#' result <- meansCpp(mtcars, 
+#'                   var_vars = c("mpg", "hp"), 
+#'                   class_vars = c("cyl", "gear"))
+#' 
+#' # Weighted analysis with custom statistics
+#' result <- meansCpp(data, 
+#'                   var_vars = "value", 
+#'                   class_vars = "group",
+#'                   statistics = c("N", "MEAN", "STD"),
+#'                   weight_var = "weights",
+#'                   vardef = "DF")
+#' }
+#'
+#' @references
+#' Welford, B. P. (1962). Note on a method for calculating corrected sums of 
+#' squares and products. Technometrics, 4(3), 419-420.
+#'
+#' @author Statistical Computing Implementation
+#' @export
+meansCpp <- function(data, var_vars = NULL, class_vars = NULL, statistics = as.character( c("N", "MEAN", "STD", "MIN", "MAX")), vardef = "DF", weight_var = NULL, freq_var = NULL, alpha = 0.05) {
+    .Call(`_obwoe_meansCpp`, data, var_vars, class_vars, statistics, vardef, weight_var, freq_var, alpha)
+}
+
 #' CART Optimal Binning with Weight of Evidence (WoE)
 #'
 #' @description
@@ -1098,5 +1258,83 @@ dmiv_woe <- function(data, target_col, feature_cols, min_bins = 3L, max_bins = 1
 #' @export
 cart_woe <- function(data, target_col, feature_cols, min_bins = 2L, max_bins = 5L, method = "cart", miss_policy = "separate", cat_sep = "%;%", digits = 4L, smooth = 0.0, criterion = "gini", min_size = 0.05, use_pruning = TRUE, cv_folds = 5L, monotonic_trend = "auto", monotonic_mode = "pava", parallel = FALSE, weights = NULL, special_vals = as.numeric( c()), max_cat = 50L, rare_pct = 0.01, verbose = 0L) {
     .Call(`_obwoe_cart_woe`, data, target_col, feature_cols, min_bins, max_bins, method, miss_policy, cat_sep, digits, smooth, criterion, min_size, use_pruning, cv_folds, monotonic_trend, monotonic_mode, parallel, weights, special_vals, max_cat, rare_pct, verbose)
+}
+
+#' Comprehensive Univariate Statistical Analysis (SAS PROC UNIVARIATE equivalent)
+#'
+#' This function performs detailed univariate analysis of numeric variables, providing
+#' comprehensive distributional statistics, quantile analysis, robust estimators, 
+#' and basic hypothesis tests. It replicates core PROC UNIVARIATE functionality.
+#'
+#' @param data A data.frame containing the variables to analyze
+#' @param var_vars Character vector of numeric variable names for analysis. If NULL,
+#'   all numeric variables will be analyzed
+#' @param class_vars Character vector of grouping variable names for stratified analysis
+#' @param vardef Variance divisor definition. Options:
+#'   \itemize{
+#'     \item "DF" - Degrees of freedom (n-1), produces unbiased estimator (default)
+#'     \item "N" - Population divisor (n), maximum likelihood estimator
+#'     \item "WEIGHT" - Sum of weights
+#'     \item "WDF" - Weighted degrees of freedom (sum of weights - 1)
+#'   }
+#' @param pctldef Percentile definition method (1-5, default 5):
+#'   \itemize{
+#'     \item 1 - Weighted average at x(np) 
+#'     \item 2 - Observation closest to np
+#'     \item 3 - Empirical cumulative distribution function
+#'     \item 4 - Weighted average at x(np+1)
+#'     \item 5 - Empirical CDF with averaging (SAS default)
+#'   }
+#' @param alpha Significance level for confidence intervals and hypothesis tests (default 0.05)
+#' @param trim Fraction of observations to trim/Winsorize from each tail (default 0.1)
+#'
+#' @return A list with multiple components replicating PROC UNIVARIATE output:
+#'   \itemize{
+#'     \item BasicStatistics - N, mean, std dev, skewness, kurtosis, min, max
+#'     \item Quantiles - P10, Q1, Median, Q3, P90, P95, P99
+#'     \item ExtremeObservations - Lowest and highest values
+#'     \item TestsForLocation - t-test and sign test for H0: mu = 0
+#'     \item RobustEstimators - Trimmed and Winsorized means
+#'   }
+#'
+#' @details
+#' The function implements extended Welford's algorithm for stable computation of 
+#' higher-order moments (up to 4th order for skewness and kurtosis). It supports
+#' multiple quantile definitions following Hyndman & Fan (1996) taxonomy, and
+#' provides robust location estimators to handle outliers.
+#'
+#' The output structure mirrors SAS PROC UNIVARIATE, with separate tables for
+#' different types of statistics. This facilitates detailed distributional analysis
+#' and assumption checking for statistical models.
+#'
+#' @examples
+#' \dontrun{
+#' # Basic univariate analysis
+#' result <- univariateCpp(mtcars, var_vars = "mpg")
+#' 
+#' # Grouped analysis with custom settings
+#' result <- univariateCpp(mtcars, 
+#'                        var_vars = c("mpg", "hp"), 
+#'                        class_vars = "cyl",
+#'                        pctldef = 4,
+#'                        trim = 0.05)
+#' 
+#' # Access specific output tables
+#' basic_stats <- result$BasicStatistics
+#' quantiles <- result$Quantiles
+#' extremes <- result$ExtremeObservations
+#' }
+#'
+#' @references
+#' Hyndman, R.J. and Fan, Y. (1996). Sample quantiles in statistical packages.
+#' American Statistician, 50(4), 361-365.
+#' 
+#' Welford, B.P. (1962). Note on a method for calculating corrected sums of
+#' squares and products. Technometrics, 4(3), 419-420.
+#'
+#' @author Statistical Computing Implementation
+#' @export
+univariateCpp <- function(data, var_vars = NULL, class_vars = NULL, vardef = "DF", pctldef = 5L, alpha = 0.05, trim = 0.1) {
+    .Call(`_obwoe_univariateCpp`, data, var_vars, class_vars, vardef, pctldef, alpha, trim)
 }
 
